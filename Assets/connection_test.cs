@@ -14,7 +14,7 @@ public class connection_test : MonoBehaviour {
         }
         else
         {
-            Network.Connect("52.10.70.115", 25566);
+            Network.Connect("52.11.93.30", 25566);
         }
     }
 
