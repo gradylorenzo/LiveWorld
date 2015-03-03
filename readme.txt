@@ -1,1 +1,1 @@
-Required Unity version: 4.6.1 Pro
+Required Unity version: 5.0.0 Personal

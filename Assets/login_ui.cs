@@ -4,9 +4,9 @@ using System.Collections;
 public class login_ui : MonoBehaviour {
 
     public bool loggedIn;
-    public string name;
-    public string pass;
-    public string id;
+    public string player_name;
+    public string player_pass;
+    public string player_id;
 
     public string user_id;
     public string user_name;
@@ -15,13 +15,13 @@ public class login_ui : MonoBehaviour {
     {
         if (!loggedIn)
         {
-            name = GUI.TextField(new Rect(0, 0, 200, 20), name);
-            pass = GUI.PasswordField(new Rect(0, 25, 200, 20), pass, '*');
+            player_name = GUI.TextField(new Rect(0, 0, 200, 20), player_name);
+            player_pass = GUI.PasswordField(new Rect(0, 25, 200, 20), player_pass, '*');
             if (GUI.Button(new Rect(0, 50, 200, 20), "Log In"))
             {
-                if (name != "" && name != null && pass != "" && pass != null)
+                if (player_name != "" && player_name != null && player_pass != "" && player_pass != null)
                 {
-                    StartCoroutine(doLogin(name, pass));
+                    StartCoroutine(doLogin(player_name, player_pass));
                 }
             }
         }
@@ -47,7 +47,7 @@ public class login_ui : MonoBehaviour {
             user_id = login[0];
             user_name = login[1];
             loggedIn = true;
-            pass = "";
+            player_pass = "";
         }
         else
         {
