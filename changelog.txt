@@ -12,3 +12,8 @@
 +Multiplayer Player Prefab
 >Connection code
 >Login UI now uses email address rather than username
+
+0.0.004
+3.4.2015 @ 1:45 PM
++Multiple Instance Logon Prevention
++Test Scene built
