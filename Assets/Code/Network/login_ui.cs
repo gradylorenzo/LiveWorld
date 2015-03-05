@@ -5,6 +5,7 @@ public class login_ui : MonoBehaviour {
 
     //Server
     public bool isServer;
+    public GUISkin main_skin;
 
     //Player Information
     public string user_id;
@@ -33,11 +34,12 @@ public class login_ui : MonoBehaviour {
 
     void OnGUI()
     {
+        GUI.skin = main_skin;
         //login UI
         if (!LoggedIn)
         {
-            GUI.Box(new Rect(0, 0, 310, 130), "Log into LiveWorld");
-            GUILayout.BeginArea(new Rect(5, 25, 300, 200));
+            GUI.Box(new Rect((Screen.width / 2) - 160, (Screen.height / 2) - 65, 320, 130), "Log into LiveWorld");
+            GUILayout.BeginArea(new Rect((Screen.width / 2) - 155, (Screen.height / 2) - 30, 310, 130));
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();
             GUILayout.Label("Email:");
@@ -73,16 +75,9 @@ public class login_ui : MonoBehaviour {
             GUILayout.EndVertical();
             GUILayout.EndArea();
         }
-        else
-        {
-            if (GUI.Button(new Rect(5, 5, 290, 20), "Log out"))
-            {
-                Network.Disconnect();
-            }
-        }
     }
 
-    void OnFailedToconnectToServer()
+    void OnFailedToConnect()
     {
         ConnectionMessage = "failed to connect to master server";
     }
@@ -121,9 +116,12 @@ public class login_ui : MonoBehaviour {
 
     void OnPlayerDisconnected(NetworkPlayer player)
     {
-        Debug.Log("Clean up after player " + player);
-        Network.RemoveRPCs(player);
-        Network.DestroyPlayerObjects(player);
+        if (Network.isServer)
+        {
+            print("Clean up after player " + player);
+            Network.RemoveRPCs(player);
+            Network.DestroyPlayerObjects(player);
+        }
     }
     
     IEnumerator doLogin(string e, string p)

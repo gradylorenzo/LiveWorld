@@ -17,3 +17,10 @@
 3.4.2015 @ 1:45 PM
 +Multiple Instance Logon Prevention
 +Test Scene built
+
+0.0.005
+3.4.2015 @ 11:43 PM
++Homebar and settings menu
+>Logout button moved to settings menu
+>Login UI centered on screen
++GUI main skin
