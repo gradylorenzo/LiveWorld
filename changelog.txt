@@ -24,3 +24,6 @@
 >Logout button moved to settings menu
 >Login UI centered on screen
 +GUI main skin
++Login background
++Exit button and prompt
++Chat box

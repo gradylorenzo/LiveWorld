@@ -21,12 +21,13 @@ public class playerNetworking : MonoBehaviour {
     void Awake()
     {
         nView = GetComponent<NetworkView>();
-        if (nView.isMine)
+        if (nView.isMine && Network.isClient)
         {
             GetComponent<FirstPersonController>().enabled = true;
             GetComponent<CharacterController>().enabled = true;
             GetComponentInChildren<Camera>().enabled = true;
             GetComponentInChildren<AudioListener>().enabled = true;
+            GetComponent<main_ui>().enabled = true;
             nView.RPC("syncPlayerName", RPCMode.OthersBuffered, playerName, playerID);
             nView.RPC("syncPlayerPosition", RPCMode.OthersBuffered, transform.position, transform.rotation);
         }
@@ -34,7 +35,7 @@ public class playerNetworking : MonoBehaviour {
 
     void Update()
     {
-        if (nView.isMine)
+        if (nView.isMine && Network.isClient)
         {
             if (Vector3.Distance(transform.position, SyncSettings.lastPosition) >= SyncSettings.syncThreshold && Quaternion.Angle(transform.rotation, SyncSettings.lastRotation) >= SyncSettings.syncThreshold)
             {
@@ -43,12 +44,6 @@ public class playerNetworking : MonoBehaviour {
                 SyncSettings.lastRotation = transform.rotation;
             }
         }
-    }
-
-    void OnPlayerConnected()
-    {
-        nView.RPC("syncPlayerName", RPCMode.AllBuffered, playerName, playerID);
-        nView.RPC("syncPlayerPosition", RPCMode.OthersBuffered, transform.position, transform.rotation);
     }
 
     [RPC]

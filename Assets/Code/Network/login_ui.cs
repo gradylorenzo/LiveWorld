@@ -6,7 +6,7 @@ public class login_ui : MonoBehaviour {
     //Server
     public bool isServer;
     public GUISkin main_skin;
-
+    public Texture2D background;
     //Player Information
     public string user_id;
     public string user_name;
@@ -15,8 +15,15 @@ public class login_ui : MonoBehaviour {
 
     //
     private bool LoggedIn = false;
+    
     private string ConnectionMessage;
     private GameObject playerGO;
+
+    //Exit Warning
+    private bool ewShow = false;
+    private float ewWantedY;
+    private float ewCurrentY;
+    private float ewLerpY;
 
     void Awake()
     {
@@ -32,14 +39,37 @@ public class login_ui : MonoBehaviour {
         }
     }
 
+    void Update()
+    {
+        if (ewLerpY < 1)
+        {
+            ewLerpY += 2 * Time.deltaTime;
+        }
+
+        if (ewCurrentY != ewWantedY)
+        {
+            ewCurrentY = Mathf.Lerp(ewCurrentY, ewWantedY, ewLerpY);
+        }
+
+        if (ewShow)
+        {
+            ewWantedY = 70;
+        }
+        else
+        {
+            ewWantedY = 0;
+        }
+    }
+
     void OnGUI()
     {
         GUI.skin = main_skin;
         //login UI
         if (!LoggedIn)
         {
-            GUI.Box(new Rect((Screen.width / 2) - 160, (Screen.height / 2) - 65, 320, 130), "Log into LiveWorld");
-            GUILayout.BeginArea(new Rect((Screen.width / 2) - 155, (Screen.height / 2) - 30, 310, 130));
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), background);
+            GUI.Box(new Rect((Screen.width / 2) - 160, (Screen.height / 2) - 80, 320, 160), "Log into LiveWorld");
+            GUILayout.BeginArea(new Rect((Screen.width / 2) - 155, (Screen.height / 2) - 50, 310, 160));
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();
             GUILayout.Label("Email:");
@@ -71,15 +101,44 @@ public class login_ui : MonoBehaviour {
                     user_pass = "";
                 }
             }
+            if (GUILayout.Button("Exit"))
+            {
+                ewShow = true;
+                ewLerpY = 0;
+            }
             GUILayout.Label(ConnectionMessage);
             GUILayout.EndVertical();
             GUILayout.EndArea();
+        
+            //Exit Warning
+            GUI.Box(new Rect(Screen.width / 2 - 160, Screen.height - ewCurrentY, 320, 65), "Are you sure you want to exit?");
+            GUILayout.BeginArea(new Rect(Screen.width / 2 - 155, Screen.height - ewCurrentY + 30, 310, 60));
+            GUILayout.BeginVertical();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("No"))
+            {
+                ewShow = false;
+                ewLerpY = 0;
+            }
+            if (GUILayout.Button("Yes"))
+            {
+                print("closing");
+                Application.Quit();
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+            GUILayout.EndArea();
+        
+        }
+        else
+        {
+            ewShow = false;
         }
     }
 
     void OnFailedToConnect()
     {
-        ConnectionMessage = "failed to connect to master server";
+        ConnectionMessage = "Failed to connect to master server";
     }
 
     void OnConnectedToServer()
@@ -111,7 +170,10 @@ public class login_ui : MonoBehaviour {
     {
         ConnectionMessage = "Disconnected";
         LoggedIn = false;
-        StartCoroutine(doUnreserveInstance(user_id));
+        if (LoggedIn)
+        {
+            StartCoroutine(doUnreserveInstance(user_id));
+        }
     }
 
     void OnPlayerDisconnected(NetworkPlayer player)
