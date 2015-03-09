@@ -250,6 +250,7 @@ public class main_ui : MonoBehaviour {
             if (go.GetComponent<main_ui>().enabled)
             {
                 go.GetComponent<main_ui>().chatMessagesList.Add(m);
+                go.GetComponent<main_ui>().chatScrollPosition.y += 10000000;
             }
         }
     }
