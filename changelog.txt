@@ -27,3 +27,7 @@
 +Login background
 +Exit button and prompt
 +Chat box
+
+0.0.006
+3.22.2014 @ 3:39 PM
++LiveWorld core namespace for simpler API.
