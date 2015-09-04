@@ -2,7 +2,7 @@
 using System.Collections;
 using LiveWorld;
 
-public class Interface : MonoBehaviour {
+public class Interface : LWInterface {
 
     public string ipAddress;
     private GameObject newNotification;
@@ -16,11 +16,11 @@ public class Interface : MonoBehaviour {
                 if (ipAddress != "")
                 {
                     LWClientMethod.ConnectToServer(ipAddress, 25566, "", false);
-                    LWInterface.NewNotification("Attempting connection...", LWInterface.Notification.NotificationType.message);
+                    NewNotification("Attempting connection...", Notification.NotificationType.message);
                 }
                 else
                 {
-                    LWInterface.NewNotification("Address required.", LWInterface.Notification.NotificationType.error);
+                    NewNotification("Address required!", Notification.NotificationType.error);
                 }
             }
             if (GUI.Button(new Rect(5, 55, 100, 20), "Server")){
@@ -35,21 +35,29 @@ public class Interface : MonoBehaviour {
             }
         }
 
-        
+        HomeBar.OnGUI();
+    }
+
+    void Update()
+    {
+        if (Input.GetButtonDown("TOGGLE_HOMEBAR"))
+        {
+            HomeBar.Toggle();
+        }
     }
 
     void OnConnectedToServer()
     {
-        LWInterface.NewNotification("Connected to server!", LWInterface.Notification.NotificationType.message);
+        NewNotification("Connected to server!", Notification.NotificationType.message);
     }
 
     void OnDisconnectedFromServer()
     {
-        LWInterface.NewNotification("Disconnected!", LWInterface.Notification.NotificationType.message);
+        NewNotification("Disconnected!", Notification.NotificationType.message);
     }
 
-    void OnFailedToConnect()
+    void OnFailedToConnect(NetworkConnectionError error)
     {
-        LWInterface.NewNotification("Failed to connect!", LWInterface.Notification.NotificationType.error);
+        NewNotification("Failed to connect: " + error, Notification.NotificationType.error);
     }
 }
