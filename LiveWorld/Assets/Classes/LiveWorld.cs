@@ -64,7 +64,7 @@ namespace LiveWorld
         }
     }
 
-    public class LWClientMethod
+    public class LWClientMethod : MonoBehaviour
     {
         public static void ConnectToServer(string ipAddress, int port, string password, bool usePassword)
         {
@@ -76,12 +76,93 @@ namespace LiveWorld
             {
                 Network.Connect(ipAddress, port);
             }
+            LWInterface.NewNotification("Attempting to connect..", LWInterface.Notification.NotificationType.message);
+        }
+
+        public static IEnumerator DoLogin()
+        {
+            if (LWClientDetails.email != null && LWClientDetails.password != null)
+            {
+
+                WWWForm loginForm = new WWWForm();
+                loginForm.AddField("email", LWClientDetails.email);
+                loginForm.AddField("password", LWClientDetails.password);
+
+                //------DOMAIN FOR LOGGING IN
+                string loginDomain = "http://www.tethys-edu.com/501.php";
+                //---------------------------
+
+                WWW request = new WWW(loginDomain, loginForm);
+
+                yield return request;
+
+                string returnedText = request.text;
+                string[] details;
+
+                if (request.isDone)
+                {
+                    if (returnedText != "NLI")
+                    {
+                        char delimitter = '&';
+                        details = returnedText.Split(delimitter);
+                        LWClientDetails.SetUserCredentials(details[0], details[1]);
+                    }
+                    else
+                    {
+                        LWInterface.NewNotification("Incorrect Credentials.", LWInterface.Notification.NotificationType.error);
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("LWCLientDetail: email and password not set");
+            }
+        }
+    }
+
+    public class LWClientDetails : MonoBehaviour
+    {
+        public static bool loggedIn = false;
+        public static string userID = "";
+        public static string username = "";
+        public static string email = "";
+        public static string password = "";
+
+        public static void SetLoginCredentials(string e, string p)
+        {
+            email = e;
+            password = p;
+        }
+
+        public static void SetUserCredentials(string i, string u)
+        {
+            userID = i;
+            username = u;
+            email = "";
+            password = "";
+            loggedIn = true;
+            LWInterface.NewNotification("Successfuly logged in", LWInterface.Notification.NotificationType.success);
+            print(username + " :" + userID + ": " + loggedIn);
+            LWClientMethod.ConnectToServer("127.0.0.1", 25566, "", false);
+        }
+
+        public static void ClearCredentials()
+        {
+            userID = "";
+            username = "";
+            email = "";
+            password = "";
         }
     }
 
     public class LWInterface : MonoBehaviour
     {
-        public static bool showHomeBar = false;
+        public static GUISkin ui_skin;
+
+        void Update()
+        {
+            ui_skin.button.fixedWidth = (Screen.width / 4) + 4;
+        }
 
         public class Notification : MonoBehaviour
         {
@@ -92,7 +173,8 @@ namespace LiveWorld
             {
                 message,
                 warning,
-                error
+                error,
+                success
             }
 
             private float currentX;
@@ -101,7 +183,7 @@ namespace LiveWorld
             public float wantedY;
 
             public NotificationType Type;
-
+            
             void Start()
             {
                 Invoke("clearNotification", Duration);
@@ -121,6 +203,8 @@ namespace LiveWorld
 
             void OnGUI()
             {
+                GUI.skin = ui_skin;
+
                 GUI.Box(new Rect(Screen.width - currentX, currentY, (Screen.width / 3) - 5, 25), "");
                 GUI.Label(new Rect(Screen.width - currentX + 5, currentY + 2, (Screen.width / 3), 20), Text);
 
@@ -144,7 +228,6 @@ namespace LiveWorld
             }
         }
 
-
         //HomeBar functionality
         public class HomeBar : MonoBehaviour
         {
@@ -156,7 +239,7 @@ namespace LiveWorld
             {
                 if (isShowing)
                 {
-                    wantedY = 40;
+                    wantedY = 25;
                 }
                 else
                 {
@@ -167,10 +250,10 @@ namespace LiveWorld
 
                 GUILayout.BeginArea(new Rect(0, Screen.height - currentY, Screen.width, 40));
                 GUILayout.BeginHorizontal();
-                GUILayout.Button("Profile");
-                GUILayout.Button("Social");
-                GUILayout.Button("World");
-                GUILayout.Button("Settings");
+                GUILayout.Button(LWClientDetails.username.ToUpper());
+                GUILayout.Button("SOCIAL");
+                GUILayout.Button("WORLD");
+                GUILayout.Button("SETTINGS");
                 GUILayout.EndHorizontal();
                 GUILayout.EndArea();
             }
@@ -194,27 +277,44 @@ namespace LiveWorld
 
     public class LWWeather : MonoBehaviour
     {
-        public enum WeatherTypes
+        public class Precipitation
         {
-            clear,
-            cloudy,
-            rain,
+            public enum PrecipitationTypes
+            {
+                clear,
+                rain,
+            }
+
+            public static PrecipitationTypes Current;
+
+            public static int RainChance = 10;
+            private static int randomSeed;
+
+            public static void DetermineIsRaining()
+            {
+                randomSeed = Random.Range(0, 99);
+
+                if (randomSeed <= RainChance)
+                {
+                    Current = PrecipitationTypes.rain;
+                }
+                else
+                {
+                    Current = PrecipitationTypes.clear;
+                }
+                print(Current + "  " + randomSeed);
+            }
         }
 
-        public static AnimationCurve TemperatureCurve;
-        public static AnimationCurve RainChanceCurve;
-
-        public static int Temperature;
-        public static bool isRaining;
-
-        public static void DetermineNewTemperature()
+        public class Temperature
         {
+            public static AnimationCurve TemperatureCurve;
+            public static int Current;
 
-        }
-
-        public static void DetermineIsRaining()
-        {
-
+            public static void DetermineNewTemperature()
+            {
+                Current = (int)TemperatureCurve.Evaluate(LWTime.HourOfDay);
+            }
         }
     }
 }
