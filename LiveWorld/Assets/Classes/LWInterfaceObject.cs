@@ -4,7 +4,6 @@ using LiveWorld;
 
 public class LWInterfaceObject : LWInterface {
 
-    public bool isHeadlessServerExecutable;
     public string ipAddress;
     public string ui_email = "";
     public string ui_password = "";
@@ -12,10 +11,16 @@ public class LWInterfaceObject : LWInterface {
 
     void Start()
     {
-        if (isHeadlessServerExecutable)
+        switch (LWServer.ServerType)
         {
-            LWServerMethod.InitializeServer(25566, 32, "", false, !Network.HavePublicAddress());
+            case (LWServer.ServerTypes.development):
+                LWServer.InitializeServer(25567, 32, "", false, !Network.HavePublicAddress());
+                break;
+            case (LWServer.ServerTypes.live):
+                LWServer.InitializeServer(25566, 32, "", false, !Network.HavePublicAddress());
+                break;
         }
+
         ui_skin = Resources.Load("GUI/main") as GUISkin;
     }
 
@@ -25,7 +30,7 @@ public class LWInterfaceObject : LWInterface {
 
         GUILayout.BeginArea(new Rect(5, 5, Screen.width / 3, Screen.height / 2));
         GUILayout.BeginVertical();
-        if (!Network.isServer && !Network.isClient && !isHeadlessServerExecutable) {
+        if (!Network.isServer && !Network.isClient && LWServer.ServerType == LWServer.ServerTypes.not_server) {
             
             ui_email = GUILayout.TextField(ui_email);
             ui_password = GUILayout.PasswordField(ui_password, '-');
@@ -45,8 +50,8 @@ public class LWInterfaceObject : LWInterface {
                 if(ui_email != "" && ui_password != "")
                 {
                     NewNotification("Attempting to log in...", Notification.NotificationType.message);
-                    LWClientDetails.SetLoginCredentials(ui_email, ui_password);
-                    StartCoroutine(LWClientMethod.DoLogin());
+                    LWClient.Details.SetLoginCredentials(ui_email, ui_password);
+                    StartCoroutine(LWClient.DoLogin());
                     ui_password = "";
                 }
             }
@@ -69,7 +74,7 @@ public class LWInterfaceObject : LWInterface {
     {
         if (Input.GetButtonDown("TOGGLE_HOMEBAR"))
         {
-            if (LWClientDetails.loggedIn)
+            if (LWClient.Details.loggedIn)
             {
                 HomeBar.Toggle();
             }
@@ -89,13 +94,13 @@ public class LWInterfaceObject : LWInterface {
     void OnDisconnectedFromServer()
     {
         NewNotification("Disconnected", Notification.NotificationType.message);
-        LWClientDetails.ClearCredentials();
+        LWClient.Details.ClearCredentials();
         LWInterface.HomeBar.isShowing = false;
     }
 
     void OnFailedToConnect(NetworkConnectionError error)
     {
         NewNotification("Failed to connect: " + error, Notification.NotificationType.error);
-        LWClientDetails.ClearCredentials();
+        LWClient.Details.ClearCredentials();
     }
 }

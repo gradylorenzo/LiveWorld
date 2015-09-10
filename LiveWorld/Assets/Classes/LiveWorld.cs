@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 
 namespace LiveWorld
 {
@@ -52,8 +53,18 @@ namespace LiveWorld
         }
     }
 
-    public class LWServerMethod
+    public class LWServer : MonoBehaviour
     {
+        public enum ServerTypes
+        {
+            development,
+            live,
+            not_server
+        }
+
+        public static ServerTypes ServerType = ServerTypes.not_server;
+
+        //Pending changes per changes in Unity 5.2 networking system.
         public static void InitializeServer(int port, int limit, string password, bool usePassword, bool useNAT)
         {
             if (usePassword)
@@ -62,10 +73,26 @@ namespace LiveWorld
             }
             Network.InitializeServer(limit, port, useNAT);
         }
+
+        public class NPCManager
+        {
+            public void SpawnNPC(GameObject npcToSpawn)
+            {
+
+            }
+        }
     }
 
-    public class LWClientMethod : MonoBehaviour
+    public class LWClient : MonoBehaviour
     {
+        public enum ClientTypes
+        {
+            development,
+            live
+        }
+
+        public static ClientTypes ClientType = ClientTypes.development;
+
         public static void ConnectToServer(string ipAddress, int port, string password, bool usePassword)
         {
             if (usePassword)
@@ -81,12 +108,12 @@ namespace LiveWorld
 
         public static IEnumerator DoLogin()
         {
-            if (LWClientDetails.email != null && LWClientDetails.password != null)
+            if (Details.email != null && Details.password != null)
             {
 
                 WWWForm loginForm = new WWWForm();
-                loginForm.AddField("email", LWClientDetails.email);
-                loginForm.AddField("password", LWClientDetails.password);
+                loginForm.AddField("email", Details.email);
+                loginForm.AddField("password", Details.password);
 
                 //------DOMAIN FOR LOGGING IN
                 string loginDomain = "http://www.tethys-edu.com/501.php";
@@ -105,7 +132,7 @@ namespace LiveWorld
                     {
                         char delimitter = '&';
                         details = returnedText.Split(delimitter);
-                        LWClientDetails.SetUserCredentials(details[0], details[1]);
+                        Details.SetUserCredentials(details[0], details[1]);
                     }
                     else
                     {
@@ -118,40 +145,108 @@ namespace LiveWorld
                 Debug.LogWarning("LWCLientDetail: email and password not set");
             }
         }
+
+        public class Details : MonoBehaviour
+        {
+            public static bool loggedIn = false;
+            public static string userID = "";
+            public static string username = "";
+            public static string email = "";
+            public static string password = "";
+
+            public static void SetLoginCredentials(string e, string p)
+            {
+                email = e;
+                password = p;
+            }
+
+            public static void SetUserCredentials(string i, string u)
+            {
+                userID = i;
+                username = u;
+                email = "";
+                password = "";
+                loggedIn = true;
+                LWInterface.NewNotification("Successfuly logged in", LWInterface.Notification.NotificationType.success);
+                print(username + " :" + userID + ": " + loggedIn);
+                if (LWClient.ClientType == LWClient.ClientTypes.development)
+                {
+                    LWClient.ConnectToServer("54.148.244.243", 25567, "", false);
+                }
+                else if (LWClient.ClientType == LWClient.ClientTypes.live)
+                {
+                    LWClient.ConnectToServer("54.148.244.243", 25566, "", false);
+                }
+            }
+
+            public static void ClearCredentials()
+            {
+                userID = "";
+                username = "";
+                email = "";
+                password = "";
+            }
+        }
     }
 
-    public class LWClientDetails : MonoBehaviour
+    public class LWSettings
     {
-        public static bool loggedIn = false;
-        public static string userID = "";
-        public static string username = "";
-        public static string email = "";
-        public static string password = "";
-
-        public static void SetLoginCredentials(string e, string p)
+        public class LWAudio
         {
-            email = e;
-            password = p;
+            public enum AudioTypes
+            {
+                sfx,
+                voice,
+                ui,
+                atmosphere,
+                music
+            }
+
+            public static int sfx;
+            public static int voice;
+            public static int ui;
+            public static int atmosphere;
+            public static int music;
         }
 
-        public static void SetUserCredentials(string i, string u)
+        public class LWVideo
         {
-            userID = i;
-            username = u;
-            email = "";
-            password = "";
-            loggedIn = true;
-            LWInterface.NewNotification("Successfuly logged in", LWInterface.Notification.NotificationType.success);
-            print(username + " :" + userID + ": " + loggedIn);
-            LWClientMethod.ConnectToServer("127.0.0.1", 25566, "", false);
+
         }
 
-        public static void ClearCredentials()
+        public class LWControl
         {
-            userID = "";
-            username = "";
-            email = "";
-            password = "";
+            public static int mouseSensitivity;
+        }
+
+        public static void CreateDefaultSettings ()
+        {
+            PlayerPrefs.SetInt("firstrun", 1);
+            PlayerPrefs.SetInt("audio.sfx", 5);
+            PlayerPrefs.SetInt("audio.voice", 5);
+            PlayerPrefs.SetInt("audio.ui", 5);
+            PlayerPrefs.SetInt("audio.atmosphere", 5);
+            PlayerPrefs.SetInt("audio.music", 5);
+
+            PlayerPrefs.SetInt("control.mouseSensitivity", 5);
+        }
+
+        public static void RetrieveSettings()
+        {
+            if (PlayerPrefs.HasKey("firstrun"))
+            {
+                LWAudio.sfx = PlayerPrefs.GetInt("audio.sfx");
+                LWAudio.voice = PlayerPrefs.GetInt("audio.voice");
+                LWAudio.voice = PlayerPrefs.GetInt("audio.ui");
+                LWAudio.voice = PlayerPrefs.GetInt("audio.atmosphere");
+                LWAudio.voice = PlayerPrefs.GetInt("audio.music");
+
+                LWControl.mouseSensitivity = PlayerPrefs.GetInt("control.mouseSensitivity");
+            }
+            else
+            {
+                CreateDefaultSettings();
+            }
         }
     }
 
@@ -229,7 +324,7 @@ namespace LiveWorld
         }
 
         //HomeBar functionality
-        public class HomeBar : MonoBehaviour
+        public class HomeBar
         {
             public static float wantedY = 0;
             private static float currentY = 0;
@@ -250,7 +345,7 @@ namespace LiveWorld
 
                 GUILayout.BeginArea(new Rect(0, Screen.height - currentY, Screen.width, 40));
                 GUILayout.BeginHorizontal();
-                GUILayout.Button(LWClientDetails.username.ToUpper());
+                GUILayout.Button(LWClient.Details.username.ToUpper());
                 GUILayout.Button("SOCIAL");
                 GUILayout.Button("WORLD");
                 GUILayout.Button("SETTINGS");
@@ -292,7 +387,7 @@ namespace LiveWorld
 
             public static void DetermineIsRaining()
             {
-                randomSeed = Random.Range(0, 99);
+                randomSeed = UnityEngine.Random.Range(0, 99);
 
                 if (randomSeed <= RainChance)
                 {
@@ -315,6 +410,59 @@ namespace LiveWorld
             {
                 Current = (int)TemperatureCurve.Evaluate(LWTime.HourOfDay);
             }
+        }
+    }
+
+    [Obsolete("LWPlayer class pending changes per changes in Unity 5.2 networking system.", false)]
+    public class LWPlayer : MonoBehaviour
+    {
+        //Pending changes per changes in Unity 5.2 networking system.
+        [RequireComponent(typeof(NetworkView))]
+
+        [System.Serializable]
+        public class PlayerInformation
+        {
+            public string name;
+            public int level;
+        }
+
+        [System.Serializable]
+        public class PlayerStats
+        {
+            public int health = 100;
+            public int attack = 1;
+            public int defense = 1;
+            public int speed = 1;
+        }
+
+        private NetworkView nView;
+        private Vector3 lastPosition;
+        private Quaternion lastRotation;
+        public float syncThreshold;
+        public PlayerStats Statistics;
+
+        void Awake()
+        {
+            nView = new NetworkView();
+        }
+
+        void Update()
+        {
+            
+            if (GetComponent<NetworkView>().isMine)
+            {
+                if (Vector3.Distance(this.transform.position, lastPosition) > syncThreshold || Quaternion.Angle(this.transform.rotation, lastRotation) > syncThreshold)
+                {
+                    nView.RPC("SynchronizePosition", RPCMode.OthersBuffered, this.transform.position, this.transform.rotation);
+                }
+            }
+        }
+
+        [RPC]
+        void SynchronizePosition(Vector3 newPosition, Quaternion newRotation)
+        {
+            this.transform.position = newPosition;
+            this.transform.rotation = newRotation;
         }
     }
 }
