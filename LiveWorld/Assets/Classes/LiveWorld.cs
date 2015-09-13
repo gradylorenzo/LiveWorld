@@ -1,468 +1,213 @@
 ﻿using UnityEngine;
+using UnityEngine.Networking;
 using System.Collections;
-using System;
 
 namespace LiveWorld
 {
-    public class LWTestFunctions : MonoBehaviour
+    public class LWTest : MonoBehaviour
     {
-        public static void test()
+        public static void Test()
         {
-            print("Test string");
+            print("Hello World");
         }
     }
-
-    public class LWTime : MonoBehaviour
+    //-------------------------------------------------------------------------------------------------------
+    public class LWNetwork : NetworkBehaviour
     {
-        public static int SecondOfDay = 0;
-        public static int MinuteOfDay = 0;
-        public static int HourOfDay = 0;
-
-        public static int Second = 0;
-        public static int Minute = 0;
-        public static int Hour = 0;
-
-        public static float TimeScale = 1;
-
-        void Awake()
+        public enum LWNetworkModes
         {
-            TimeScale = Mathf.Clamp(TimeScale, .1f, 100);
-            InvokeRepeating("TimeStep", 0, 1 / TimeScale);
+            rel_server,//Release server mode
+            dev_server,//Development server Mode
+            rel_client,//Release client mode
+            dev_client,//Development client mode
+            rel_host,//Release host mode
+            dev_host//Development host mode
         }
 
-        void TimeStep()
-        {
-            if (SecondOfDay < 86399)
+        public static LWNetworkModes NetworkMode = LWNetworkModes.dev_client;
+
+        //Method class for server-side behavior
+        public class Server
+        { 
+            public static void InitializeServer()
             {
-                SecondOfDay += 1;
+                if(NetworkMode == LWNetworkModes.dev_server)
+                {
+                    NetworkManager.singleton.networkPort = 7778;
+                    NetworkManager.singleton.StartServer();
+                }
+                else if(NetworkMode == LWNetworkModes.rel_server)
+                {
+                    NetworkManager.singleton.networkPort = 7777;
+                    NetworkManager.singleton.StartServer();
+                }
+                else
+                {
+                    Debug.LogError("Not in any server mode, adjust LWNetwork.NetworkMode");
+                }
+                //Start server on 7778 if using development server
+                //Start server on 7777 if using release server
+                //Otherwise, log an error for no server mode
             }
-            else
+        }
+
+        //Method class for client-side behavior
+        public class Client
+        {
+            public static void InitializeClient()
             {
-                SecondOfDay = 0;
-            }
-        }
-
-        void LateUpdate()
-        {
-            MinuteOfDay = SecondOfDay / 60;
-            HourOfDay = MinuteOfDay / 60;
-
-            Second = SecondOfDay - (MinuteOfDay * 60);
-            Minute = MinuteOfDay - (HourOfDay * 60);
-            Hour = SecondOfDay / 3600;
-        }
-    }
-
-    public class LWServer : MonoBehaviour
-    {
-        public enum ServerTypes
-        {
-            development,
-            live,
-            not_server
-        }
-
-        public static ServerTypes ServerType = ServerTypes.not_server;
-
-        //Pending changes per changes in Unity 5.2 networking system.
-        public static void InitializeServer(int port, int limit, string password, bool usePassword, bool useNAT)
-        {
-            if (usePassword)
-            {
-                Network.incomingPassword = password;
-            }
-            Network.InitializeServer(limit, port, useNAT);
-        }
-
-        public class NPCManager
-        {
-            public void SpawnNPC(GameObject npcToSpawn)
-            {
-
+                if (NetworkMode == LWNetworkModes.dev_client)
+                {
+                    NetworkManager.singleton.networkPort = 7778;
+                    NetworkManager.singleton.networkAddress = "127.0.0.1";
+                    NetworkManager.singleton.StartClient();
+                }
+                else if (NetworkMode == LWNetworkModes.rel_client)
+                {
+                    NetworkManager.singleton.networkPort = 7777;
+                    NetworkManager.singleton.networkAddress = "127.0.0.1";
+                    NetworkManager.singleton.StartClient();
+                }
+                else
+                {
+                    Debug.LogError("Not in any client mode, adjust LWNetwork.NetworkMode");
+                }
+                //Start client on 7778 if using development client
+                //Start client on 7777 if using release client
+                //Otherwise, log an error for no client mode
             }
         }
     }
-
-    public class LWClient : MonoBehaviour
+    //-------------------------------------------------------------------------------------------------------
+    public class LWLogin
     {
-        public enum ClientTypes
+        //Credentials used by the login system
+        public class Credentials
         {
-            development,
-            live
+            public static string user_ID;
+            public static string user_name;
+            public static string user_email;
+            public static string user_password;
+
+            public static void ClearLogin()
+            {
+                user_email = "";
+                user_password = "";
+            }
+
+            public static void ClearUser()
+            {
+                user_ID = "";
+                user_name = "";
+            }
+
+            public static void SetLogin(string email, string password)
+            {
+                user_email = email;
+                user_password = password;
+            }
+
+            public static void SetUser(string id, string name)
+            {
+                user_ID = id;
+                user_name = name;
+            }
         }
 
-        public static ClientTypes ClientType = ClientTypes.development;
-
-        public static void ConnectToServer(string ipAddress, int port, string password, bool usePassword)
+        public enum LWLoginMode
         {
-            if (usePassword)
-            {
-                Network.Connect(ipAddress, port, password);
-            }
-            else
-            {
-                Network.Connect(ipAddress, port);
-            }
-            LWInterface.NewNotification("Attempting to connect..", LWInterface.Notification.NotificationType.message);
+            manual_connection,
+            automatic_connection
         }
 
-        public static IEnumerator DoLogin()
+        public static LWLoginMode LoginMode = LWLoginMode.automatic_connection;
+        public static bool isLoggedIn = false;
+        private static string Domain = "http://tethys-edu.com/501.php";
+
+        public static IEnumerator Login()
         {
-            if (Details.email != null && Details.password != null)
+            if (Credentials.user_email != "" && Credentials.user_password != "")
             {
-
-                WWWForm loginForm = new WWWForm();
-                loginForm.AddField("email", Details.email);
-                loginForm.AddField("password", Details.password);
-
-                //------DOMAIN FOR LOGGING IN
-                string loginDomain = "http://www.tethys-edu.com/501.php";
-                //---------------------------
-
-                WWW request = new WWW(loginDomain, loginForm);
+                WWWForm requestForm = new WWWForm();
+                requestForm.AddField("email", Credentials.user_email);
+                requestForm.AddField("password", Credentials.user_password);
+                WWW request = new WWW(Domain, requestForm);
 
                 yield return request;
 
-                string returnedText = request.text;
-                string[] details;
+                string requestText = request.text;
 
-                if (request.isDone)
+                if (requestText != "NLI")
                 {
-                    if (returnedText != "NLI")
-                    {
-                        char delimitter = '&';
-                        details = returnedText.Split(delimitter);
-                        Details.SetUserCredentials(details[0], details[1]);
-                    }
-                    else
-                    {
-                        LWInterface.NewNotification("Incorrect Credentials.", LWInterface.Notification.NotificationType.error);
-                    }
+                    string[] creds;
+                    char delim = '&';
+                    creds = requestText.Split(delim);
+
+                    Credentials.SetUser(creds[0], creds[1]);
+                    isLoggedIn = true;
                 }
+                else
+                {
+                    //Do something else if the login is invalid
+                }
+                //If the page does not return "NLI", the login is valid
+                //Otherwise, the incorrect credentials were provided
+
+                Credentials.ClearLogin();
+                //Clear the user's login credentials, regardless of their validity
+
+                if(LoginMode == LWLoginMode.automatic_connection)
+                {
+                    LWNetwork.Client.InitializeClient();
+                }
+                //Automatically connect after logging in if configured to do so
             }
             else
             {
-                Debug.LogWarning("LWCLientDetail: email and password not set");
-            }
-        }
-
-        public class Details : MonoBehaviour
-        {
-            public static bool loggedIn = false;
-            public static string userID = "";
-            public static string username = "";
-            public static string email = "";
-            public static string password = "";
-
-            public static void SetLoginCredentials(string e, string p)
-            {
-                email = e;
-                password = p;
-            }
-
-            public static void SetUserCredentials(string i, string u)
-            {
-                userID = i;
-                username = u;
-                email = "";
-                password = "";
-                loggedIn = true;
-                LWInterface.NewNotification("Successfuly logged in", LWInterface.Notification.NotificationType.success);
-                print(username + " :" + userID + ": " + loggedIn);
-                if (LWClient.ClientType == LWClient.ClientTypes.development)
-                {
-                    LWClient.ConnectToServer("54.148.244.243", 25567, "", false);
-                }
-                else if (LWClient.ClientType == LWClient.ClientTypes.live)
-                {
-                    LWClient.ConnectToServer("54.148.244.243", 25566, "", false);
-                }
-            }
-
-            public static void ClearCredentials()
-            {
-                userID = "";
-                username = "";
-                email = "";
-                password = "";
+                Debug.LogError("Login credentials not set, use LWLogin.Credentials.SetLogin()");
             }
         }
     }
-
-    public class LWSettings
+    //-------------------------------------------------------------------------------------------------------
+    public class LWInterface
     {
-        public class LWAudio
+        public class HomeBar
         {
-            public enum AudioTypes
+
+        }
+
+
+        public static void NewNotification (string text, Notification.LWNotificationType Type)
+        {
+
+        }
+
+        //Class to inherit and attach to gameobjects as a Notification
+        public class Notification
+        {
+            public enum LWNotificationType
             {
-                sfx,
-                voice,
-                ui,
-                atmosphere,
-                music
-            }
-
-            public static int sfx;
-            public static int voice;
-            public static int ui;
-            public static int atmosphere;
-            public static int music;
-        }
-
-        public class LWVideo
-        {
-
-        }
-
-        public class LWControl
-        {
-            public static int mouseSensitivity;
-        }
-
-        public static void CreateDefaultSettings ()
-        {
-            PlayerPrefs.SetInt("firstrun", 1);
-            PlayerPrefs.SetInt("audio.sfx", 5);
-            PlayerPrefs.SetInt("audio.voice", 5);
-            PlayerPrefs.SetInt("audio.ui", 5);
-            PlayerPrefs.SetInt("audio.atmosphere", 5);
-            PlayerPrefs.SetInt("audio.music", 5);
-
-            PlayerPrefs.SetInt("control.mouseSensitivity", 5);
-        }
-
-        public static void RetrieveSettings()
-        {
-            if (PlayerPrefs.HasKey("firstrun"))
-            {
-                LWAudio.sfx = PlayerPrefs.GetInt("audio.sfx");
-                LWAudio.voice = PlayerPrefs.GetInt("audio.voice");
-                LWAudio.voice = PlayerPrefs.GetInt("audio.ui");
-                LWAudio.voice = PlayerPrefs.GetInt("audio.atmosphere");
-                LWAudio.voice = PlayerPrefs.GetInt("audio.music");
-
-                LWControl.mouseSensitivity = PlayerPrefs.GetInt("control.mouseSensitivity");
-            }
-            else
-            {
-                CreateDefaultSettings();
-            }
-        }
-    }
-
-    public class LWInterface : MonoBehaviour
-    {
-        public static GUISkin ui_skin;
-
-        void Update()
-        {
-            ui_skin.button.fixedWidth = (Screen.width / 4) + 4;
-        }
-
-        public class Notification : MonoBehaviour
-        {
-            public string Text;
-            public float Duration = 5;
-
-            public enum NotificationType
-            {
+                success,
                 message,
                 warning,
-                error,
-                success
+                error
             }
+            public string text = "Hello World";
+            public LWNotificationType Type = LWNotificationType.message;
 
-            private float currentX;
-            private float currentY;
-            public float wantedX;
-            public float wantedY;
+            private Vector2 currentPosition;
+            private Vector2 wantedPosition;
 
-            public NotificationType Type;
-            
             void Start()
             {
-                Invoke("clearNotification", Duration);
-                currentX = Screen.width / 3;
-                currentY = -30;
-                wantedX = Screen.width / 3;
-                wantedY = 5;
 
-                foreach (GameObject go in GameObject.FindGameObjectsWithTag("LWNotificationObject"))
-                {
-                    if (go != this.gameObject)
-                    {
-                        go.GetComponent<Notification>().wantedY += 30;
-                    }
-                }
             }
 
             void OnGUI()
             {
-                GUI.skin = ui_skin;
 
-                GUI.Box(new Rect(Screen.width - currentX, currentY, (Screen.width / 3) - 5, 25), "");
-                GUI.Label(new Rect(Screen.width - currentX + 5, currentY + 2, (Screen.width / 3), 20), Text);
-
-                currentX = Mathf.Lerp(currentX, wantedX, .1f);
-                currentY = Mathf.Lerp(currentY, wantedY, .1f);
-
-                if (currentX <= 0)
-                {
-                    Destroy(this.gameObject);
-                }
-
-                if(currentY >= Screen.height / 2)
-                {
-                    clearNotification();
-                }
-            }
-
-            void clearNotification()
-            {
-                wantedX = -10;
-            }
-        }
-
-        //HomeBar functionality
-        public class HomeBar
-        {
-            public static float wantedY = 0;
-            private static float currentY = 0;
-            public static bool isShowing = false;
-
-            public static void OnGUI()
-            {
-                if (isShowing)
-                {
-                    wantedY = 25;
-                }
-                else
-                {
-                    wantedY = 0;
-                }
-
-                currentY = Mathf.Lerp(currentY, wantedY, .1f);
-
-                GUILayout.BeginArea(new Rect(0, Screen.height - currentY, Screen.width, 40));
-                GUILayout.BeginHorizontal();
-                GUILayout.Button(LWClient.Details.username.ToUpper());
-                GUILayout.Button("SOCIAL");
-                GUILayout.Button("WORLD");
-                GUILayout.Button("SETTINGS");
-                GUILayout.EndHorizontal();
-                GUILayout.EndArea();
-            }
-
-            public static void Toggle()
-            {
-                isShowing = !isShowing;
-            }
-        }
-
-        //Function to call when creating a new notification
-        public static void NewNotification(string Text, Notification.NotificationType Type)
-        {
-            GameObject newNotification = Resources.Load("LWNotificationObject") as GameObject;
-            newNotification.GetComponent<Notification>().Text = Text;
-            newNotification.GetComponent<Notification>().Type = Type;
-            Instantiate(newNotification, Vector3.zero, new Quaternion(0, 0, 0, 0));
-            newNotification = null;
-        }
-    }
-
-    public class LWWeather : MonoBehaviour
-    {
-        public class Precipitation
-        {
-            public enum PrecipitationTypes
-            {
-                clear,
-                rain,
-            }
-
-            public static PrecipitationTypes Current;
-
-            public static int RainChance = 10;
-            private static int randomSeed;
-
-            public static void DetermineIsRaining()
-            {
-                randomSeed = UnityEngine.Random.Range(0, 99);
-
-                if (randomSeed <= RainChance)
-                {
-                    Current = PrecipitationTypes.rain;
-                }
-                else
-                {
-                    Current = PrecipitationTypes.clear;
-                }
-                print(Current + "  " + randomSeed);
-            }
-        }
-
-        public class Temperature
-        {
-            public static AnimationCurve TemperatureCurve;
-            public static int Current;
-
-            public static void DetermineNewTemperature()
-            {
-                Current = (int)TemperatureCurve.Evaluate(LWTime.HourOfDay);
             }
         }
     }
-
-    [Obsolete("LWPlayer class pending changes per changes in Unity 5.2 networking system.", false)]
-    public class LWPlayer : MonoBehaviour
-    {
-        //Pending changes per changes in Unity 5.2 networking system.
-        [RequireComponent(typeof(NetworkView))]
-
-        [System.Serializable]
-        public class PlayerInformation
-        {
-            public string name;
-            public int level;
-        }
-
-        [System.Serializable]
-        public class PlayerStats
-        {
-            public int health = 100;
-            public int attack = 1;
-            public int defense = 1;
-            public int speed = 1;
-        }
-
-        private NetworkView nView;
-        private Vector3 lastPosition;
-        private Quaternion lastRotation;
-        public float syncThreshold;
-        public PlayerStats Statistics;
-
-        void Awake()
-        {
-            nView = new NetworkView();
-        }
-
-        void Update()
-        {
-            
-            if (GetComponent<NetworkView>().isMine)
-            {
-                if (Vector3.Distance(this.transform.position, lastPosition) > syncThreshold || Quaternion.Angle(this.transform.rotation, lastRotation) > syncThreshold)
-                {
-                    nView.RPC("SynchronizePosition", RPCMode.OthersBuffered, this.transform.position, this.transform.rotation);
-                }
-            }
-        }
-
-        [RPC]
-        void SynchronizePosition(Vector3 newPosition, Quaternion newRotation)
-        {
-            this.transform.position = newPosition;
-            this.transform.rotation = newRotation;
-        }
-    }
+    //-------------------------------------------------------------------------------------------------------
 }

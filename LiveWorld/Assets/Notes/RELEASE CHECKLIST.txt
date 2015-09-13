@@ -1,0 +1,7 @@
+VERSION RELEASE CHECKLIST
+
+Switch network mode to "rel_server" (this will make the server utilize port 7777, rather than 7778)
+Build lw_s
+Switch network mode to "rel_client"
+Enable config dialog
+Build lw_c
