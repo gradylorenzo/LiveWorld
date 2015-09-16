@@ -82,7 +82,7 @@ namespace LiveWorld
     public class LWLogin
     {
         //Credentials used by the login system
-        public class Credentials
+        public static class Credentials
         {
             public static string user_ID;
             public static string user_name;
@@ -173,9 +173,97 @@ namespace LiveWorld
     {
         //Class to inherit to attach to player gameobjects. Keep the component inactive on
         //non-local players, only activate if local player
-        public class HomeBar
+        public abstract class HomeBar : MonoBehaviour
         {
-            
+            [System.Serializable]
+            public class Showing
+            {
+                public bool main = false;
+                public bool player = false;
+                public bool social = false;
+                public bool world = false;
+                public bool settings = false;
+            }
+
+            public Showing isShowing;
+            public GUISkin Skin;
+            public float slideSpeed = .2f;
+            private float wantedY;
+            private float currentY;
+
+            void Start()
+            {
+                currentY = 0;
+                wantedY = 0;
+            }
+
+            void OnGUI()
+            {
+                if (Skin)
+                {
+                    GUI.skin = Skin;
+                    Skin.button.fixedWidth = Screen.width / 4;
+                }
+
+                currentY = Mathf.Lerp(currentY, wantedY, slideSpeed);
+
+                if (isShowing.main)
+                    wantedY = 20;
+                else
+                    wantedY = 0;
+
+                GUILayout.BeginArea(new Rect(0, Screen.height - currentY, Screen.width, 20));
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Player"))//use LWLogin.Credentials.user_name
+                {
+                    NewNotification("Player clicked!", Notification.LWNotificationType.Success);
+                    isShowing.player = true;
+                    isShowing.social = false;
+                    isShowing.world = false;
+                }
+                if (GUILayout.Button("Social"))
+                {
+                    NewNotification("Social clicked!", Notification.LWNotificationType.Message);
+                    isShowing.player = false;
+                    isShowing.social = true;
+                    isShowing.world = false;
+                }
+                if (GUILayout.Button("World"))
+                {
+                    NewNotification("World clicked!", Notification.LWNotificationType.Warning);
+                    isShowing.player = false;
+                    isShowing.social = false;
+                    isShowing.world = true;
+                }
+                if (GUILayout.Button("Settings"))
+                {
+                    NewNotification("Settings clicked!", Notification.LWNotificationType.Error);
+                    //Allow settings to be displayed even if other windows are displayed
+                    isShowing.settings = !isShowing.settings;
+                    LWSettings.SetDefaultSettings();
+                }
+                GUILayout.EndHorizontal();
+                GUILayout.EndArea();
+            }
+
+            void Update()
+            {
+                if (Input.GetButtonDown("TOGGLE_HOMEBAR"))
+                {
+                    isShowing.main = !isShowing.main;                    
+                }
+
+                if (isShowing.main)
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                }
+                else
+                {
+                    Cursor.lockState = CursorLockMode.Locked;
+                }
+
+                Cursor.visible = isShowing.main;
+            }
         }
 
         //Static class to call when creating a new notification.
@@ -190,7 +278,7 @@ namespace LiveWorld
         }
 
         //Class to inherit and attach to gameobjects as a Notification
-        public class Notification : MonoBehaviour
+        public abstract class Notification : MonoBehaviour
         {
             public enum LWNotificationType
             {
@@ -252,13 +340,22 @@ namespace LiveWorld
 
                 currentPosition = Vector2.Lerp(currentPosition, wantedPosition, slideSpeed);
 
-                GUILayout.BeginArea(new Rect(Screen.width - currentPosition.x, currentPosition.y, (Screen.width / 4) - 5, 20), Skin.box);
+                if(Skin)
+                    GUILayout.BeginArea(new Rect(Screen.width - currentPosition.x, currentPosition.y, (Screen.width / 4) - 5, 20), Skin.box);
+                else
+                    GUILayout.BeginArea(new Rect(Screen.width - currentPosition.x, currentPosition.y, (Screen.width / 4) - 5, 20));
+
                 GUILayout.Label("[<color=#" + prefixColor + ">" + prefixType + "</color>] " + Text);
                 GUILayout.EndArea();
 
                 if(currentPosition.x <= 0)
                 {
                     Destroy(this.gameObject);
+                }
+
+                if(currentPosition.y > Screen.height / 2)
+                {
+                    Destroy();
                 }
             }
 
@@ -269,9 +366,54 @@ namespace LiveWorld
         }
     }
     //-------------------------------------------------------------------------------------------------------
-    public class LWPlayer
+    public abstract class LWPlayer : MonoBehaviour
     {
+        [RequireComponent(typeof(NetworkIdentity))]
+        public class Synchronize : NetworkBehaviour
+        {
 
+        }
+    }
+    //-------------------------------------------------------------------------------------------------------
+    public class LWSettings : MonoBehaviour
+    {
+        public static float sfx_vol;
+        public static float ui_vol;
+        public static float music_vol;
+        public static float vo_vol;
+
+        //Generate default settings if
+        public static void SetDefaultSettings()
+        {
+            PlayerPrefs.SetInt("firstrun", 1);
+            PlayerPrefs.SetFloat("sfx_vol", .5f);
+            PlayerPrefs.SetFloat("ui_vol", .5f);
+            PlayerPrefs.SetFloat("music_vol", .5f);
+            PlayerPrefs.SetFloat("vo_vol", .5f);
+        }
+
+        public static void GetSettings()
+        {
+            if (PlayerPrefs.HasKey("firstrun"))
+            {
+                sfx_vol = PlayerPrefs.GetFloat("sfx_vol");
+                ui_vol = PlayerPrefs.GetFloat("ui_vol");
+                music_vol = PlayerPrefs.GetFloat("music_vol");
+                vo_vol = PlayerPrefs.GetFloat("vo_vol");
+            }
+            else
+            {
+                print("Default settings not set.");
+            }
+        }
+
+        public static void SetVolumeSettings(float sfx, float ui, float music, float vo)
+        {
+            PlayerPrefs.SetFloat("sfx_vol", sfx);
+            PlayerPrefs.SetFloat("ui_vol", ui);
+            PlayerPrefs.SetFloat("music_vol", music);
+            PlayerPrefs.SetFloat("vo_vol", vo);
+        }
     }
     //-------------------------------------------------------------------------------------------------------
 }
