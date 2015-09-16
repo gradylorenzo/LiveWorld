@@ -169,45 +169,109 @@ namespace LiveWorld
         }
     }
     //-------------------------------------------------------------------------------------------------------
-    public class LWInterface
+    public class LWInterface : MonoBehaviour
     {
+        //Class to inherit to attach to player gameobjects. Keep the component inactive on
+        //non-local players, only activate if local player
         public class HomeBar
         {
-
+            
         }
 
-
+        //Static class to call when creating a new notification.
         public static void NewNotification (string text, Notification.LWNotificationType Type)
         {
-
+            GameObject newNotification;
+            newNotification = Resources.Load("GUI/LWNotificationObject") as GameObject;
+            newNotification.GetComponent<Notification>().Text = text;
+            newNotification.GetComponent<Notification>().Type = Type;
+            Instantiate(newNotification, Vector3.zero, new Quaternion(0, 0, 0, 0));
+            newNotification = null;
         }
 
         //Class to inherit and attach to gameobjects as a Notification
-        public class Notification
+        public class Notification : MonoBehaviour
         {
             public enum LWNotificationType
             {
-                success,
-                message,
-                warning,
-                error
+                Success,
+                Message,
+                Warning,
+                Error
             }
-            public string text = "Hello World";
-            public LWNotificationType Type = LWNotificationType.message;
+            public string Text = "Hello World";
+            public LWNotificationType Type = LWNotificationType.Message;
+            public float slideSpeed = .05f;
+            public GUISkin Skin;
 
-            private Vector2 currentPosition;
             private Vector2 wantedPosition;
+            private Vector2 currentPosition;
+            
+            private string prefixType;
+            private string prefixColor;
 
             void Start()
             {
+                prefixType = Type.ToString();
+                switch (Type)
+                {
+                    case (LWNotificationType.Success):
+                        prefixColor = "00ff00ff";
+                        break;
+                    case (LWNotificationType.Message):
+                        prefixColor = "00ffffff";
+                        break;
+                    case (LWNotificationType.Warning):
+                        prefixColor = "ffff00ff";
+                        break;
+                    case (LWNotificationType.Error):
+                        prefixColor = "ff0000ff";
+                        break;
+                }
+                currentPosition = new Vector2(Screen.width / 4, -50);
+                wantedPosition = new Vector2(Screen.width / 4, 5);
+                this.gameObject.tag = "LWNotificationObject";
 
+                foreach(GameObject go in GameObject.FindGameObjectsWithTag("LWNotificationObject"))
+                {
+                    if(go != this.gameObject)
+                    {
+                        go.GetComponent<Notification>().wantedPosition.y += 25;
+                    }
+                }
+
+                Invoke("Destroy", 5);
             }
 
             void OnGUI()
             {
+                if (Skin && GUI.skin != null)
+                {
+                    GUI.skin = Skin;
+                }
 
+                currentPosition = Vector2.Lerp(currentPosition, wantedPosition, slideSpeed);
+
+                GUILayout.BeginArea(new Rect(Screen.width - currentPosition.x, currentPosition.y, (Screen.width / 4) - 5, 20), Skin.box);
+                GUILayout.Label("[<color=#" + prefixColor + ">" + prefixType + "</color>] " + Text);
+                GUILayout.EndArea();
+
+                if(currentPosition.x <= 0)
+                {
+                    Destroy(this.gameObject);
+                }
+            }
+
+            void Destroy()
+            {
+                wantedPosition.x = -1;
             }
         }
+    }
+    //-------------------------------------------------------------------------------------------------------
+    public class LWPlayer
+    {
+
     }
     //-------------------------------------------------------------------------------------------------------
 }
