@@ -20,8 +20,6 @@ namespace LiveWorld
             dev_server,//Development server Mode
             rel_client,//Release client mode
             dev_client,//Development client mode
-            rel_host,//Release host mode
-            dev_host//Development host mode
         }
 
         public static LWNetworkModes NetworkMode = LWNetworkModes.dev_client;
@@ -128,6 +126,7 @@ namespace LiveWorld
         {
             if (Credentials.user_email != "" && Credentials.user_password != "")
             {
+                LWInterface.NewNotification("Attempting to log in..", LWInterface.Notification.LWNotificationType.Message);
                 WWWForm requestForm = new WWWForm();
                 requestForm.AddField("email", Credentials.user_email);
                 requestForm.AddField("password", Credentials.user_password);
@@ -145,9 +144,21 @@ namespace LiveWorld
 
                     Credentials.SetUser(creds[0], creds[1]);
                     isLoggedIn = true;
+
+                    if (LoginMode == LWLoginMode.automatic_connection)
+                    {
+                        LWInterface.NewNotification(Credentials.user_name + " logged in. Connecting...", LWInterface.Notification.LWNotificationType.Success);
+                        LWNetwork.Client.InitializeClient();
+                    }
+                    else
+                    {
+                        LWInterface.NewNotification(Credentials.user_name + " logged in.", LWInterface.Notification.LWNotificationType.Success);
+                    }
+                    //Automatically connect after logging in if configured to do so
                 }
                 else
                 {
+                    LWInterface.NewNotification("Incorrect login.", LWInterface.Notification.LWNotificationType.Error);
                     //Do something else if the login is invalid
                 }
                 //If the page does not return "NLI", the login is valid
@@ -155,12 +166,6 @@ namespace LiveWorld
 
                 Credentials.ClearLogin();
                 //Clear the user's login credentials, regardless of their validity
-
-                if(LoginMode == LWLoginMode.automatic_connection)
-                {
-                    LWNetwork.Client.InitializeClient();
-                }
-                //Automatically connect after logging in if configured to do so
             }
             else
             {
@@ -171,6 +176,17 @@ namespace LiveWorld
     //-------------------------------------------------------------------------------------------------------
     public class LWInterface : MonoBehaviour
     {
+        //Static class to call when creating a new notification.
+        public static void NewNotification(string text, Notification.LWNotificationType Type)
+        {
+            GameObject newNotification;
+            newNotification = Resources.Load("GUI/LWNotificationObject") as GameObject;
+            newNotification.GetComponent<Notification>().Text = text;
+            newNotification.GetComponent<Notification>().Type = Type;
+            Instantiate(newNotification, Vector3.zero, new Quaternion(0, 0, 0, 0));
+            newNotification = null;
+        }
+
         //Class to inherit to attach to player gameobjects. Keep the component inactive on
         //non-local players, only activate if local player
         public abstract class HomeBar : MonoBehaviour
@@ -266,17 +282,6 @@ namespace LiveWorld
             }
         }
 
-        //Static class to call when creating a new notification.
-        public static void NewNotification (string text, Notification.LWNotificationType Type)
-        {
-            GameObject newNotification;
-            newNotification = Resources.Load("GUI/LWNotificationObject") as GameObject;
-            newNotification.GetComponent<Notification>().Text = text;
-            newNotification.GetComponent<Notification>().Type = Type;
-            Instantiate(newNotification, Vector3.zero, new Quaternion(0, 0, 0, 0));
-            newNotification = null;
-        }
-
         //Class to inherit and attach to gameobjects as a Notification
         public abstract class Notification : MonoBehaviour
         {
@@ -300,6 +305,7 @@ namespace LiveWorld
 
             void Start()
             {
+                DontDestroyOnLoad(this.gameObject);
                 prefixType = Type.ToString();
                 switch (Type)
                 {
@@ -362,6 +368,60 @@ namespace LiveWorld
             void Destroy()
             {
                 wantedPosition.x = -1;
+            }
+        }
+
+        public abstract class Connection : NetworkManager
+        {
+            public GUISkin skin;
+            public string email;
+            public string password;
+
+            void OnGUI()
+            {
+                
+                    GUI.skin = skin;
+
+                    GUILayout.BeginArea(new Rect(5, 5, Screen.width / 4, Screen.height / 4));
+
+                    GUILayout.BeginVertical();
+                if (!LWLogin.isLoggedIn && (LWNetwork.NetworkMode == LWNetwork.LWNetworkModes.dev_client || LWNetwork.NetworkMode == LWNetwork.LWNetworkModes.rel_client))
+                {
+                    email = GUILayout.TextField(email);
+                    password = GUILayout.PasswordField(password, '*');
+                    if (GUILayout.Button("CONNECT"))
+                    {
+                        if (email != "" && password != "")
+                        {
+                            LWLogin.Credentials.SetLogin(email, password);
+                            StartCoroutine(LWLogin.Login());
+                            password = string.Empty;
+                        }
+                        else
+                        {
+                            if (email == "")
+                            {
+                                NewNotification("Email required.", Notification.LWNotificationType.Error);
+                            }
+
+                            if (password == "")
+                            {
+                                NewNotification("Password required.", Notification.LWNotificationType.Error);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (GUILayout.Button("DISCONNECT") && (LWNetwork.NetworkMode == LWNetwork.LWNetworkModes.dev_client || LWNetwork.NetworkMode == LWNetwork.LWNetworkModes.rel_client))
+                    {
+                        StopClient();
+                        NewNotification("Disconnected", Notification.LWNotificationType.Message);
+                    }
+                }
+                    GUILayout.EndVertical();
+
+                    GUILayout.EndArea();
             }
         }
     }
