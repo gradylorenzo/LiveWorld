@@ -17,7 +17,7 @@ namespace LiveWorld
     //-------------------------------------------------------------------------------------------------------
     public class LWSecurity : MonoBehaviour
     {
-        private static string aesKey = "k3NZ09bK8E4YU3mVKKnKvwmSYcGXGWNr";
+        private static string aesKey = "k3NZ09bK8E4YU3mVKKnKvwmSycGXGWNr";
         private static string aesIV = "yZPyXIzs1SxOJnjo";
         
         public static string Encrypt(string text)
