@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.Networking;
 using System.Collections;
+using System.Security.Cryptography;
+using System.Text;
+using System.IO;
 
 namespace LiveWorld
 {
@@ -9,6 +12,27 @@ namespace LiveWorld
         public static void Test()
         {
             print("Hello World");
+        }
+    }
+    //-------------------------------------------------------------------------------------------------------
+    public class LWSecurity : MonoBehaviour
+    {
+        private static string aesKey = "k3NZ09bK8E4YU3mVKKnKvwmSYcGXGWNr";
+        private static string aesIV = "yZPyXIzs1SxOJnjo";
+        
+        public static string Encrypt(string text)
+        {
+            byte[] plaintextbytes = Encoding.ASCII.GetBytes(text);
+            Aes aes = Aes.Create();
+            aes.BlockSize = 128;
+            aes.KeySize = 256;
+            aes.Key = Encoding.ASCII.GetBytes(aesKey);
+            aes.IV = Encoding.ASCII.GetBytes(aesIV);
+            aes.Padding = PaddingMode.PKCS7;
+            aes.Mode = CipherMode.CBC;
+            ICryptoTransform crypto = aes.CreateEncryptor(aes.Key, aes.IV);
+            byte[] encrypted = crypto.TransformFinalBlock(plaintextbytes, 0, plaintextbytes.Length);
+            return Encoding.ASCII.GetString(encrypted);
         }
     }
     //-------------------------------------------------------------------------------------------------------
@@ -50,7 +74,7 @@ namespace LiveWorld
         }
 
         //Method class for client-side behavior
-        public class Client
+        public class Client : NetworkBehaviour
         {
             public static void InitializeClient()
             {
@@ -74,11 +98,30 @@ namespace LiveWorld
                 //Start client on 7777 if using release client
                 //Otherwise, log an error for no client mode
             }
+
+            public static void Disconnect()
+            {
+                LWLogin.Logout();
+                NetworkManager.singleton.StopClient();
+                NetworkManager.singleton.StopServer();
+                LWInterface.NewNotification("Disconnected.", LWInterface.Notification.LWNotificationType.Message);
+            }
         }
     }
     //-------------------------------------------------------------------------------------------------------
     public class LWLogin
     {
+        public enum LWLoginMode
+        {
+            manual_connection,
+            automatic_connection
+        }
+
+        public static LWLoginMode LoginMode = LWLoginMode.automatic_connection;
+        public static bool isLoggedIn = false;
+        private static string Domain = "http://tethys-edu.com/501.php";
+        
+
         //Credentials used by the login system
         public static class Credentials
         {
@@ -112,18 +155,9 @@ namespace LiveWorld
             }
         }
 
-        public enum LWLoginMode
-        {
-            manual_connection,
-            automatic_connection
-        }
-
-        public static LWLoginMode LoginMode = LWLoginMode.automatic_connection;
-        public static bool isLoggedIn = false;
-        private static string Domain = "http://tethys-edu.com/501.php";
-
         public static IEnumerator Login()
         {
+
             if (Credentials.user_email != "" && Credentials.user_password != "")
             {
                 LWInterface.NewNotification("Attempting to log in..", LWInterface.Notification.LWNotificationType.Message);
@@ -171,6 +205,15 @@ namespace LiveWorld
             {
                 Debug.LogError("Login credentials not set, use LWLogin.Credentials.SetLogin()");
             }
+        }
+
+        public static void Logout()
+        {
+            Credentials.user_email = "";
+            Credentials.user_ID = "";
+            Credentials.user_name = "";
+            Credentials.user_password = "";
+            isLoggedIn = false;
         }
     }
     //-------------------------------------------------------------------------------------------------------
@@ -393,7 +436,8 @@ namespace LiveWorld
                     {
                         if (email != "" && password != "")
                         {
-                            LWLogin.Credentials.SetLogin(email, password);
+                            
+                            LWLogin.Credentials.SetLogin(LWSecurity.Encrypt(email), LWSecurity.Encrypt(password));
                             StartCoroutine(LWLogin.Login());
                             password = string.Empty;
                         }
@@ -415,8 +459,8 @@ namespace LiveWorld
                 {
                     if (GUILayout.Button("DISCONNECT") && (LWNetwork.NetworkMode == LWNetwork.LWNetworkModes.dev_client || LWNetwork.NetworkMode == LWNetwork.LWNetworkModes.rel_client))
                     {
-                        StopClient();
-                        NewNotification("Disconnected", Notification.LWNotificationType.Message);
+                        
+                        LWNetwork.Client.Disconnect();
                     }
                 }
                     GUILayout.EndVertical();
@@ -428,11 +472,19 @@ namespace LiveWorld
     //-------------------------------------------------------------------------------------------------------
     public abstract class LWPlayer : MonoBehaviour
     {
-        [RequireComponent(typeof(NetworkIdentity))]
-        public class Synchronize : NetworkBehaviour
-        {
+        public string player_name;
 
+        [System.Serializable]
+        public class Statistics
+        {
+            public int health;
+            public int energy;
+            public float attack;
+            public float defense;
+            public float speed;
         }
+
+        public Statistics Stats;
     }
     //-------------------------------------------------------------------------------------------------------
     public class LWSettings : MonoBehaviour
